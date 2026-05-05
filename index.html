@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Emotion Recognition · Affective Computing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+
+<body>
+  <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">🧠</span>
+        <div>
+          <h1 class="logo-title">Emotion Recognition</h1>
+          <p class="logo-sub">Affective Computing Homework</p>
+        </div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat">
+          <span class="stat-value" id="total-count">0</span>
+          <span class="stat-label">Submissions</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="top-emotion-stat">—</span>
+          <span class="stat-label">Dominant Classification</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+  <main class="main">
+
+    <!-- ── Row 1: Input + Results ─────────────────────────────────── -->
+    <div class="row-two">
+
+      <!-- Input Panel -->
+      <section class="card input-card">
+        <div class="card-header">
+          <h2>Submit Human Expression</h2>
+          <span class="badge">Critical Interface</span>
+        </div>
+
+        <div class="textarea-wrap">
+          <textarea
+            id="text-input"
+            placeholder="Type or paste any text to detect its emotion…"
+            rows="6"
+            maxlength="1000"
+          ></textarea>
+          <span class="char-count"><span id="char-num">0</span> / 1000</span>
+        </div>
+
+        <div class="btn-row">
+          <button id="analyze-btn" class="btn btn-primary" onclick="analyzeEmotion()">
+            <span id="btn-icon">🔍</span>
+            <span id="btn-label">Submit to Analysis</span>
+          </button>
+          <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
+        </div>
+
+        <!-- Ground truth selector -->
+        <div class="ground-truth-wrap">
+          <p class="section-label">Your felt emotion (Ground Truth)</p>
+          <div class="gt-options" id="gt-options">
+            <label class="gt-option"><input type="radio" name="ground-truth" value="joy" />😊 Joy</label>
+            <label class="gt-option"><input type="radio" name="ground-truth" value="sadness" />😢 Sadness</label>
+            <label class="gt-option"><input type="radio" name="ground-truth" value="anger" />😠 Anger</label>
+            <label class="gt-option"><input type="radio" name="ground-truth" value="fear" />😨 Fear</label>
+            <label class="gt-option"><input type="radio" name="ground-truth" value="love" />❤️ Love</label>
+            <label class="gt-option"><input type="radio" name="ground-truth" value="surprise" />😮 Surprise</label>
+          </div>
+          <div class="system-whisper" id="gt-doubt" style="display:none"></div>
+        </div>
+
+        <!-- Example chips -->
+        <div class="examples">
+          <p class="section-label">Provocation prompts</p>
+          <div class="chips" id="example-chips">
+            <button class="chip" onclick="tryExample(this)">I am so happy today! 🎉</button>
+            <button class="chip" onclick="tryExample(this)">I feel really scared about what might happen.</button>
+            <button class="chip" onclick="tryExample(this)">I love you so much, you mean everything to me.</button>
+            <button class="chip" onclick="tryExample(this)">This is absolutely infuriating, I can't take it anymore!</button>
+            <button class="chip" onclick="tryExample(this)">I'm feeling so lonely and empty inside.</button>
+            <button class="chip" onclick="tryExample(this)">Wow, I never expected this — what a surprise!</button>
+          </div>
+        </div>
+
+        <!-- Model meta -->
+        <div class="model-meta">
+          <div class="meta-row"><span class="meta-key">Classifier</span><span class="meta-val">TF-IDF + Logistic Regression</span></div>
+          <div class="meta-row"><span class="meta-key">Training Corpus</span><span class="meta-val">dair-ai/emotion (20 k samples)</span></div>
+          <div class="meta-row"><span class="meta-key">Classes</span><span class="meta-val">6 emotional labels</span></div>
+          <div class="meta-row"><span class="meta-key">Shortcut</span><span class="meta-val">Ctrl + Enter to submit</span></div>
+        </div>
+      </section>
+
+      <!-- Results Panel -->
+      <section class="card results-card" id="results-card">
+
+        <!-- Placeholder -->
+        <div class="placeholder" id="placeholder">
+          <span class="placeholder-icon">💭</span>
+          <p>Submit text + your felt emotion<br/>to reveal algorithmic misreading</p>
+        </div>
+
+        <!-- Results (hidden until first prediction) -->
+        <div class="results-body" id="results-body" style="display:none">
+
+          <!-- Primary emotion -->
+          <div class="primary-emotion" id="primary-emotion">
+            <div class="emotion-emoji" id="emotion-emoji">😊</div>
+            <div class="emotion-right">
+              <div class="emotion-name" id="emotion-name">Joy</div>
+              <div class="conf-bar-wrap">
+                <div class="conf-bar" id="conf-bar"></div>
+              </div>
+              <div class="conf-label" id="conf-label">System Confidence: 0 %</div>
+            </div>
+          </div>
+
+          <!-- Misreading score -->
+          <div class="misreading-panel" id="misreading-panel">
+            <div class="misreading-head">
+              <p class="section-label">Misreading Score</p>
+              <span class="misreading-tag" id="misreading-tag">Accurate</span>
+            </div>
+            <div class="misreading-bar-wrap">
+              <div class="misreading-bar" id="misreading-bar"></div>
+            </div>
+            <div class="misreading-meta">
+              <span id="misreading-value">0%</span>
+              <span id="misreading-note">Low interpretive distortion</span>
+            </div>
+          </div>
+
+          <!-- Bar chart -->
+          <div class="chart-wrap">
+            <p class="section-label">System Classification Distribution</p>
+            <canvas id="emotion-chart"></canvas>
+          </div>
+
+          <!-- Key words -->
+          <div id="keywords-wrap">
+            <p class="section-label">Tokens Driving Classification</p>
+            <p class="token-philosophy" id="token-philosophy">Your emotional expression has been reduced to these tokens.</p>
+            <div class="keyword-chips" id="keyword-chips"></div>
+          </div>
+
+          <div class="system-statement" id="system-statement" style="display:none">
+            <p class="section-label">System Statement</p>
+            <p class="system-statement-text" id="system-statement-text">—</p>
+          </div>
+
+          <!-- Critical layer -->
+          <div class="critical-layer" id="critical-layer">
+            <h3>System Interpretation vs Human Reality</h3>
+            <p id="critical-algorithm">Algorithm thinks: —</p>
+            <p id="critical-human">You feel: —</p>
+            <p id="critical-score">Misreading Score: —</p>
+            <p class="critical-philosophy">These two may not refer to the same thing.</p>
+            <div class="critical-warning" id="critical-warning" style="display:none">
+              ⚠️ High Misinterpretation Detected
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </div><!-- /row-two -->
+
+    <!-- ── Row 2: Valence-Arousal Circumplex ──────────────────────── -->
+    <div class="card circumplex-card" id="circumplex-card" style="display:none">
+      <div class="card-header">
+        <h2>Valence – Arousal Circumplex</h2>
+        <span class="badge">Russell's Model (1980)</span>
+      </div>
+
+      <div class="circumplex-layout">
+        <canvas id="va-canvas" width="420" height="420"></canvas>
+
+        <div class="va-legend">
+          <h3>Dimensional Model of Affect</h3>
+          <p>
+            Russell's (1980) Circumplex Model represents emotions in a two-dimensional
+            space defined by <strong>Valence</strong> (positive ↔ negative) and
+            <strong>Arousal</strong> (high ↔ low activation).
+          </p>
+          <div class="va-axes">
+            <div>📐 <strong>Valence</strong> – how pleasant the emotion feels</div>
+            <div>⚡ <strong>Arousal</strong> – level of physiological activation</div>
+            <div>🟡 <strong>Algorithm Emotion</strong> – system interpretation</div>
+            <div>🔵 <strong>Ground Truth Emotion</strong> – human self-report</div>
+          </div>
+          <div class="va-current" id="va-current"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Row 3: History ─────────────────────────────────────────── -->
+    <div class="card history-card" id="history-card" style="display:none">
+      <div class="card-header">
+        <h2>Archive of Misinterpretations</h2>
+        <div class="history-actions">
+          <button class="btn btn-ghost btn-sm" id="sort-history-btn" onclick="toggleHistorySort()">Sort by Misreading: ON</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearHistory()">Clear all</button>
+        </div>
+      </div>
+      <div class="history-list" id="history-list"></div>
+    </div>
+
+  </main>
+
+  <!-- ═══════════════ LOADING OVERLAY ═══════════════ -->
+  <div class="loading-overlay" id="loading-overlay" style="display:none">
+    <div class="spinner-ring"></div>
+  </div>
+
+  <!-- ═══════════════ ERROR TOAST ═══════════════ -->
+  <div class="toast" id="error-toast" style="display:none"></div>
+
+  <!-- ═══════════════ FOOTER ═══════════════ -->
+  <footer class="footer">
+    <p>Affective Computing Homework &nbsp;·&nbsp; Emotion Recognition System</p>
+    <p>Model: TF-IDF + Logistic Regression &nbsp;·&nbsp; Dataset: dair-ai/emotion</p>
+  </footer>
+
+  <script src="/static/js/main.js"></script>
+</body>
+</html>
